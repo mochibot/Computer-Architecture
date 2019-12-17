@@ -1,8 +1,11 @@
 """CPU functionality."""
 
-import sys, os
+import sys, re
 
-dirname = os.path.dirname(os.path.abspath(__file__))
+HLT = 0b00000001
+LDI = 0b10000010
+PRN = 0b01000111
+MUL = 0b10100010
 
 class CPU:
     """Main CPU class."""
@@ -19,21 +22,31 @@ class CPU:
         address = 0
 
         # For now, we've just hardcoded a program:
+        # program = [
+        #     # From print8.ls8
+        #     0b10000010, # LDI R0,8
+        #     0b00000000,
+        #     0b00001000,
+        #     0b01000111, # PRN R0
+        #     0b00000000,
+        #     0b00000001, # HLT
+        # ]
 
-        program = [
-            # From print8.ls8
-            0b10000010, # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111, # PRN R0
-            0b00000000,
-            0b00000001, # HLT
-        ]
+        # for instruction in program:
+        #     self.ram[address] = instruction
+        #     address += 1
 
-        for instruction in program:
-            self.ram[address] = instruction
-            address += 1
+        if len(sys.argv) != 2:
+            sys.exit('Please provide input in the format of "ls8.py [filname]"')
 
+        with open(sys.argv[1]) as f:
+            for line in f:
+                instruction = re.match(r'\d{8}', line)
+                if instruction is not None:
+                    self.ram[address] = int(instruction.group(), 2)
+                    address += 1
+                else: 
+                    continue
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
@@ -41,6 +54,8 @@ class CPU:
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
         #elif op == "SUB": etc
+        elif op == 'MUL':
+            self.reg[reg_a] *= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -71,18 +86,23 @@ class CPU:
         while flag:
             ir = self.ram_read(self.pc)
 
-            if ir == 0b00000001:  #HLT handler
+            if ir == HLT:  
                 flag = False
-            
-            elif ir == 0b10000010:
+                self.pc += 1
+            elif ir == LDI:
                 operand_a = self.ram_read(self.pc + 1)
                 operand_b = self.ram_read(self.pc + 2)
                 self.raw_write(operand_b, operand_a)
                 self.pc += 3        
-            elif ir == 0b01000111:
+            elif ir == PRN:
                 operand_a = self.ram_read(self.pc + 1)
                 print(self.reg[operand_a])
                 self.pc += 2
+            elif ir == MUL:
+                operand_a = self.ram_read(self.pc + 1)
+                operand_b = self.ram_read(self.pc + 2)
+                self.alu('MUL', operand_a, operand_b)
+                self.pc += 3        
             else:
                 print(f"Unknown instruction at index {self.pc}")
                 self.trace()
