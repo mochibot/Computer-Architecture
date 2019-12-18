@@ -6,6 +6,10 @@ HLT = 0b00000001
 LDI = 0b10000010
 PRN = 0b01000111
 MUL = 0b10100010
+PUSH = 0b01000101
+POP = 0b01000110
+
+SP = 7
 
 class CPU:
     """Main CPU class."""
@@ -13,7 +17,7 @@ class CPU:
     def __init__(self):
         """Construct a new CPU."""
         self.ram = [0] * 256
-        self.reg = [0] * 8
+        self.reg = [0] * 7 + [0xF4]
         self.pc = 0
 
     def load(self):
@@ -102,7 +106,21 @@ class CPU:
                 operand_a = self.ram_read(self.pc + 1)
                 operand_b = self.ram_read(self.pc + 2)
                 self.alu('MUL', operand_a, operand_b)
-                self.pc += 3        
+                self.pc += 3
+            elif ir == PUSH:
+                # Decrement SP
+                # Copy value in register to address pointed to by SP
+                operand_a = self.ram_read(self.pc + 1)
+                self.reg[SP] -= 1   
+                self.ram[self.reg[SP]] = self.reg[operand_a]  
+                self.pc += 2  
+            elif ir == POP:
+                # Copy value from address pointed to by SP to given register
+                # Increment SP
+                operand_a = self.ram_read(self.pc + 1)
+                self.raw_write(self.ram[self.reg[SP]], operand_a)
+                self.reg[SP] += 1   
+                self.pc += 2    
             else:
                 print(f"Unknown instruction at index {self.pc}")
                 self.trace()
