@@ -65,6 +65,19 @@ but you'll have to implement those three above instructions first!
 * Read this whole file.
 * Skim the spec.
 
+- Examples:
+  - print8.ls8: print the number 8 on the screen
+  - printstr.ls8: print 'Hello World!' on the screen
+  - mult.ls8: multiple 8 and 9 and print product on the screen
+  - call.ls8: pass 10 to mult2print, which should print 10 + 10 (20). pass 15 into mult2print (print 30). pass 18 into mult2print (print 36). pass 30 to mult2print (print 60). 
+  - interrupts.ls8
+  - keyboard.ls8
+  - sctest.ls8
+  - stack.ls8: create 2 variables with values 1 + 2, push both to stack. set variable 1 to 3, pop stack register to variable 1, and print variable1. set variable 1 to 4 and push to stack, pop stack and regster to variable 2. pop stack and register to varialbe 1. print variables 2 and 1.
+  - stackoverflow.ls8
+- cpu.py: define CPU class and methods (need additional implementation)
+- ls8.py: instantiate cpu class, load data and run
+
 ## Step 1: Add the constructor to `cpu.py`
 
 Add list properties to the `CPU` class to hold 256 bytes of memory and 8
