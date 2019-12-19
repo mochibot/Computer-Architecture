@@ -6,8 +6,11 @@ HLT = 0b00000001
 LDI = 0b10000010
 PRN = 0b01000111
 MUL = 0b10100010
+ADD = 0b10100000
 PUSH = 0b01000101
 POP = 0b01000110
+CALL = 0b01010000
+RET = 0b00010001
 
 SP = 7
 
@@ -54,7 +57,6 @@ class CPU:
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
-
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
         #elif op == "SUB": etc
@@ -107,6 +109,11 @@ class CPU:
                 operand_b = self.ram_read(self.pc + 2)
                 self.alu('MUL', operand_a, operand_b)
                 self.pc += 3
+            elif ir == ADD:
+                operand_a = self.ram_read(self.pc + 1)
+                operand_b = self.ram_read(self.pc + 2)
+                self.alu('ADD', operand_a, operand_b)
+                self.pc += 3
             elif ir == PUSH:
                 # Decrement SP
                 # Copy value in register to address pointed to by SP
@@ -120,7 +127,18 @@ class CPU:
                 operand_a = self.ram_read(self.pc + 1)
                 self.raw_write(self.ram[self.reg[SP]], operand_a)
                 self.reg[SP] += 1   
-                self.pc += 2    
+                self.pc += 2
+            elif ir == CALL:
+                operand_a = self.ram_read(self.pc + 1)
+                # Push the return address to the stack
+                self.reg[SP] -= 1
+                self.ram[self.reg[SP]] = self.pc + 2
+                # Move PC to the address stored in the given register
+                self.pc = self.reg[operand_a]  
+            elif ir == RET:
+                # Pop value from stack and store in the PC
+                self.pc = self.ram[self.reg[SP]]
+                self.reg[SP] += 1    
             else:
                 print(f"Unknown instruction at index {self.pc}")
                 self.trace()
