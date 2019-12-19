@@ -22,6 +22,17 @@ class CPU:
         self.ram = [0] * 256
         self.reg = [0] * 7 + [0xF4]
         self.pc = 0
+        self.flag = False
+        self.branchtable = {}
+        self.branchtable[HLT] = self.handle_HLT
+        self.branchtable[LDI] = self.handle_LDI
+        self.branchtable[PRN] = self.handle_PRN
+        self.branchtable[MUL] = self.handle_MUL
+        self.branchtable[ADD] = self.handle_ADD
+        self.branchtable[PUSH] = self.handle_PUSH
+        self.branchtable[POP] = self.handle_POP
+        self.branchtable[CALL] = self.handle_CALL
+        self.branchtable[RET] = self.handle_RET
 
     def load(self):
         """Load a program into memory."""
@@ -85,62 +96,65 @@ class CPU:
 
         print()
 
+    def handle_HLT(self, op_a, op_b):
+        self.flag = False
+        self.pc += 1
+
+    def handle_LDI(self, op_a, op_b):
+        self.raw_write(op_b, op_a)
+        self.pc += 3
+
+    def handle_PRN(self, op_a, op_b):
+        print(self.reg[op_a])
+        self.pc += 2
+    
+    def handle_MUL(self, op_a, op_b):
+        self.alu('MUL', op_a, op_b)
+        self.pc += 3
+    
+    def handle_ADD(self, op_a, op_b):
+        self.alu('ADD', op_a, op_b)
+        self.pc += 3
+
+    def handle_PUSH(self, op_a, op_b):
+        # Decrement SP
+        # Copy value in register to address pointed to by SP
+        self.reg[SP] -= 1  
+        self.ram[self.reg[SP]] = self.reg[op_a]
+        self.pc += 2 
+
+    def handle_POP(self, op_a, op_b):
+        # Copy value from address pointed to by SP to given register
+        # Increment SP
+        self.raw_write(self.ram[self.reg[SP]], op_a)
+        self.reg[SP] += 1   
+        self.pc += 2
+
+    def handle_CALL(self, op_a, op_b):
+        # Push the return address to the stack
+        self.reg[SP] -= 1
+        self.ram[self.reg[SP]] = self.pc + 2
+        # Move PC to the address stored in the given register
+        self.pc = self.reg[op_a]  
+
+    def handle_RET(self, op_a, op_b):
+        # Pop value from stack and store in the PC
+        self.pc = self.ram[self.reg[SP]]
+        self.reg[SP] += 1 
+
     def run(self):
         """Run the CPU."""
-        flag = True
+        self.flag = True
 
-        while flag:
+        while self.flag:
             ir = self.ram_read(self.pc)
-
-            if ir == HLT:  
-                flag = False
-                self.pc += 1
-            elif ir == LDI:
+            if ir in self.branchtable: 
                 operand_a = self.ram_read(self.pc + 1)
-                operand_b = self.ram_read(self.pc + 2)
-                self.raw_write(operand_b, operand_a)
-                self.pc += 3        
-            elif ir == PRN:
-                operand_a = self.ram_read(self.pc + 1)
-                print(self.reg[operand_a])
-                self.pc += 2
-            elif ir == MUL:
-                operand_a = self.ram_read(self.pc + 1)
-                operand_b = self.ram_read(self.pc + 2)
-                self.alu('MUL', operand_a, operand_b)
-                self.pc += 3
-            elif ir == ADD:
-                operand_a = self.ram_read(self.pc + 1)
-                operand_b = self.ram_read(self.pc + 2)
-                self.alu('ADD', operand_a, operand_b)
-                self.pc += 3
-            elif ir == PUSH:
-                # Decrement SP
-                # Copy value in register to address pointed to by SP
-                operand_a = self.ram_read(self.pc + 1)
-                self.reg[SP] -= 1   
-                self.ram[self.reg[SP]] = self.reg[operand_a]  
-                self.pc += 2  
-            elif ir == POP:
-                # Copy value from address pointed to by SP to given register
-                # Increment SP
-                operand_a = self.ram_read(self.pc + 1)
-                self.raw_write(self.ram[self.reg[SP]], operand_a)
-                self.reg[SP] += 1   
-                self.pc += 2
-            elif ir == CALL:
-                operand_a = self.ram_read(self.pc + 1)
-                # Push the return address to the stack
-                self.reg[SP] -= 1
-                self.ram[self.reg[SP]] = self.pc + 2
-                # Move PC to the address stored in the given register
-                self.pc = self.reg[operand_a]  
-            elif ir == RET:
-                # Pop value from stack and store in the PC
-                self.pc = self.ram[self.reg[SP]]
-                self.reg[SP] += 1    
+                operand_b = self.ram_read(self.pc + 2) 
+                self.branchtable[ir](operand_a, operand_b)
             else:
                 print(f"Unknown instruction at index {self.pc}")
+                self.flag = False
                 self.trace()
                 sys.exit(1)  
 
